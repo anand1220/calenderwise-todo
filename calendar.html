@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Calendar with Month Navigation</title>
+<style>
+  body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f0f4f8;
+  padding: 20px;
+  max-width: 420px;
+  margin: 40px auto;
+  color: #333;
+  user-select: none;
+}
+
+h1 {
+  text-align: center;
+  font-weight: 700;
+  font-size: 28px;
+  margin-bottom: 20px;
+  color: #222;
+  text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  background: #fff;
+  padding: 15px 20px;
+  border-radius: 12px;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+}
+
+.calendar-header button {
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 20px;
+  font-weight: 600;
+  transition: background-color 0.25s ease;
+  box-shadow: 0 3px 6px rgba(74,144,226,0.5);
+}
+.calendar-header button:hover {
+  background-color: #357abd;
+  box-shadow: 0 5px 10px rgba(53,122,189,0.7);
+}
+
+.month-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: #4a90e2;
+  letter-spacing: 0.04em;
+}
+
+.weekdays, .days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  text-align: center;
+}
+
+.weekdays div {
+  font-weight: 700;
+  background: #dbe9f7;
+  padding: 12px 0;
+  border-radius: 10px;
+  color: #2a4d69;
+  user-select: none;
+  box-shadow: inset 0 -2px 4px rgba(0,0,0,0.1);
+}
+
+.days div {
+  padding: 18px 0;
+  border-radius: 12px;
+  cursor: pointer;
+  background: white;
+  box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+  font-weight: 600;
+  color: #444;
+  transition: background-color 0.3s, color 0.3s, transform 0.15s;
+  user-select: none;
+}
+
+.days div:hover {
+  background-color: #f5923e;
+  color: white;
+  transform: scale(1.07);
+  box-shadow: 0 6px 15px rgba(245,146,62,0.6);
+}
+
+.days .today {
+  border: 3px solid #4a90e2;
+  box-shadow: 0 0 10px 2px #4a90e2;
+  font-weight: 700;
+}
+
+.days .completed-all {
+  background-color: #28a745 !important; /* green */
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(40,167,69,0.7);
+  font-weight: 700;
+  transform: scale(1.05);
+}
+
+.days .pending {
+  background-color: #e74c3c !important; /* red */
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(231,76,60,0.7);
+  font-weight: 700;
+  transform: scale(1.05);
+}
+
+@media (max-width: 420px) {
+  body {
+    padding: 10px;
+    max-width: 100%;
+  }
+  .calendar-header {
+    padding: 10px 15px;
+  }
+  .calendar-header button {
+    padding: 8px 12px;
+    font-size: 18px;
+  }
+  .month-title {
+    font-size: 22px;
+  }
+  .weekdays div, .days div {
+    padding: 14px 0;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<h1>Calendar - <span id="yearDisplay">2025</span></h1>
+<div class="calendar-header">
+  <button id="prevMonthBtn" title="Previous Month">&#8592;</button>
+  <div class="month-title" id="monthTitle">January</div>
+  <button id="nextMonthBtn" title="Next Month">&#8594;</button>
+</div>
+
+<div class="weekdays" id="weekdaysContainer"></div>
+<div class="days" id="daysContainer"></div>
+
+<script>
+  const year = 2025; // Change year as needed
+  const monthTitle = document.getElementById('monthTitle');
+  const yearDisplay = document.getElementById('yearDisplay');
+  const weekdaysContainer = document.getElementById('weekdaysContainer');
+  const daysContainer = document.getElementById('daysContainer');
+  const prevMonthBtn = document.getElementById('prevMonthBtn');
+  const nextMonthBtn = document.getElementById('nextMonthBtn');
+
+  const monthNames = [
+    "January", "February", "March", "April",
+    "May", "June", "July", "August",
+    "September", "October", "November", "December"
+  ];
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  // Show current month by default
+  let currentMonth = new Date().getMonth();
+
+  const today = new Date();
+
+  // Load tasks from localStorage
+  const allTasks = JSON.parse(localStorage.getItem('allTasks')) || {};
+
+  function formatDateKey(year, month, day) {
+    const mm = (month + 1).toString().padStart(2, '0');
+    const dd = day.toString().padStart(2, '0');
+    return `${year}-${mm}-${dd}`;
+  }
+
+  function getTaskStatus(dateKey) {
+    const tasks = allTasks[dateKey];
+    if (!tasks || tasks.length === 0) return null;
+
+    const allCompleted = tasks.every(task => task.completed);
+    return allCompleted ? 'completed' : 'pending';
+  }
+
+  function renderWeekdays() {
+    weekdaysContainer.innerHTML = '';
+    weekdays.forEach(day => {
+      const dayDiv = document.createElement('div');
+      dayDiv.textContent = day;
+      weekdaysContainer.appendChild(dayDiv);
+    });
+  }
+
+  function renderDays(month) {
+    daysContainer.innerHTML = '';
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    // Empty slots before first day
+    for (let i = 0; i < firstDay; i++) {
+      const emptyDiv = document.createElement('div');
+      daysContainer.appendChild(emptyDiv);
+    }
+
+    // Days
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayDiv = document.createElement('div');
+      dayDiv.textContent = day;
+
+      // Highlight today
+      if(year === today.getFullYear() && month === today.getMonth() && day === today.getDate()) {
+        dayDiv.classList.add('today');
+      }
+
+      const dateKey = formatDateKey(year, month, day);
+      const status = getTaskStatus(dateKey);
+      if (status === 'completed') {
+        dayDiv.classList.add('completed-all');
+      } else if (status === 'pending') {
+        dayDiv.classList.add('pending');
+      }
+
+      dayDiv.addEventListener('click', () => {
+        window.location.href = `todo.html?date=${dateKey}`;
+      });
+
+      daysContainer.appendChild(dayDiv);
+    }
+  }
+
+  function updateCalendar() {
+    monthTitle.textContent = monthNames[currentMonth];
+    yearDisplay.textContent = year;
+    renderWeekdays();
+    renderDays(currentMonth);
+  }
+
+  prevMonthBtn.addEventListener('click', () => {
+    currentMonth = (currentMonth - 1 + 12) % 12;
+    updateCalendar();
+  });
+
+  nextMonthBtn.addEventListener('click', () => {
+    currentMonth = (currentMonth + 1) % 12;
+    updateCalendar();
+  });
+
+  updateCalendar();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Date-wise To-Do List</title>
+<style>
+    body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    max-width: 500px;
+    margin: 50px auto;
+    background: #fff;
+    padding: 30px 40px 40px;
+    border-radius: 15px;
+    box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+    color: #333;
+  }
+  h1 {
+    text-align: center;
+    font-weight: 700;
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: #2c3e50;
+  }
+  #taskInput {
+    width: 100%;
+    padding: 14px 18px;
+    font-size: 18px;
+    border-radius: 10px;
+    border: 2px solid #ddd;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+    outline-offset: 2px;
+  }
+  #taskInput:focus {
+    border-color: #f5923e;
+    box-shadow: 0 0 8px rgba(245,146,62,0.5);
+  }
+  ul {
+    list-style: none;
+    padding-left: 0;
+    margin-top: 30px;
+  }
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f7f9fc;
+    padding: 14px 20px;
+    margin-bottom: 15px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 500;
+    color: #34495e;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+    transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+  }
+  li:hover {
+    background-color: #f5923e;
+    color: white;
+    box-shadow: 0 6px 15px rgba(245,146,62,0.4);
+  }
+  li.completed {
+    text-decoration: line-through;
+    color: #95a5a6;
+    background: #d4edda;
+    font-style: italic;
+    box-shadow: none;
+    cursor: default;
+  }
+  button.delete-btn {
+    background: #e74c3c;
+    border: none;
+    color: white;
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(231,76,60,0.6);
+    transition: background-color 0.3s ease, transform 0.15s ease;
+  }
+  button.delete-btn:hover {
+    background: #c0392b;
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(192,57,43,0.8);
+  }
+  button.delete-btn:active {
+    transform: scale(0.95);
+  }
+  a.back-link {
+    display: inline-block;
+    margin-bottom: 30px;
+    color: #f5923e;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 16px;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.3s ease;
+  }
+  a.back-link:hover {
+    border-color: #f5923e;
+    text-decoration: none;
+  }
+
+@media (max-width: 600px) {
+  body {
+    margin: 20px 15px;
+    padding: 20px 20px 30px;
+    max-width: 100%;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 20px;
+  }
+  #taskInput {
+    font-size: 16px;
+    padding: 12px 14px;
+  }
+  li {
+    font-size: 16px;
+    padding: 12px 15px;
+  }
+  button.delete-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  a.back-link {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<a href="calendar.html" class="back-link">&larr; Back to Calendar</a>
+<h1 id="title">Tasks for </h1>
+<input type="text" id="taskInput" placeholder="Add new task and press Enter" />
+<ul id="taskList"></ul>
+
+<script>
+  // Get date from URL param
+  const urlParams = new URLSearchParams(window.location.search);
+  const dateStr = urlParams.get('date');
+  if(!dateStr) {
+    alert('Date not specified!');
+    window.location.href = 'calendar.html';
+  }
+
+  const title = document.getElementById('title');
+  const taskInput = document.getElementById('taskInput');
+  const taskList = document.getElementById('taskList');
+
+  title.textContent = `Tasks for ${new Date(dateStr).toDateString()}`;
+
+  let allTasks = JSON.parse(localStorage.getItem('allTasks')) || {};
+  let tasks = allTasks[dateStr] || [];
+
+  function saveTasks() {
+    allTasks[dateStr] = tasks;
+    localStorage.setItem('allTasks', JSON.stringify(allTasks));
+  }
+
+  function renderTasks() {
+    taskList.innerHTML = '';
+    tasks.forEach((task, index) => {
+      const li = document.createElement('li');
+      li.textContent = task.text;
+      if(task.completed) li.classList.add('completed');
+
+      li.addEventListener('click', () => {
+        tasks[index].completed = !tasks[index].completed;
+        saveTasks();
+        renderTasks();
+      });
+
+      const delBtn = document.createElement('button');
+      delBtn.textContent = 'Delete';
+      delBtn.classList.add('delete-btn');
+      delBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        tasks.splice(index, 1);
+        saveTasks();
+        renderTasks();
+      });
+
+      li.appendChild(delBtn);
+      taskList.appendChild(li);
+    });
+  }
+
+  taskInput.addEventListener('keyup', (e) => {
+    if(e.key === 'Enter' && taskInput.value.trim() !== '') {
+      tasks.push({text: taskInput.value.trim(), completed: false});
+      taskInput.value = '';
+      saveTasks();
+      renderTasks();
+    }
+  });
+
+  renderTasks();
+</script>
+
+</body>
+</html>
